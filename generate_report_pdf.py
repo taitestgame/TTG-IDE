@@ -1,0 +1,841 @@
+import os
+from playwright.sync_api import sync_playwright
+
+html_content = """<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Báo Cáo Kế Hoạch & Tiến Độ Đồ Án Chuyên Ngành - TTG IDE</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.5;
+    font-size: 12.5px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .header-box {
+    border-bottom: 2px solid #2563eb;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .header-left h3 {
+    margin: 0 0 3px 0;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .header-left h4 {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #64748b;
+  }
+
+  .badge-primary {
+    display: inline-block;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .title-section {
+    text-align: center;
+    margin: 14px 0 16px 0;
+  }
+
+  .title-section h1 {
+    margin: 0 0 6px 0;
+    font-size: 18.5px;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+
+  .title-section h2 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2563eb;
+    line-height: 1.4;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+
+  .meta-item {
+    display: flex;
+  }
+
+  .meta-label {
+    width: 125px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .meta-value {
+    flex: 1;
+    color: #0f172a;
+    font-weight: 500;
+  }
+
+  h2.section-heading {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    border-left: 4px solid #2563eb;
+    padding-left: 8px;
+    margin: 16px 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    page-break-after: avoid;
+  }
+
+  h3.sub-heading {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 12px 0 6px 0;
+    page-break-after: avoid;
+  }
+
+  p {
+    margin: 0 0 8px 0;
+    text-align: justify;
+  }
+
+  ul, ol {
+    margin: 0 0 8px 0;
+    padding-left: 18px;
+  }
+
+  li {
+    margin-bottom: 3px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 10px 0;
+    font-size: 11px;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 4px 7px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  .status-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .status-done {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+  }
+
+  .status-progress {
+    background-color: #fef9c3;
+    color: #a16207;
+    border: 1px solid #fef08a;
+  }
+
+  /* Mockup UI Wireframe Styles */
+  .wireframe-card {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 8px 0 10px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    page-break-inside: avoid;
+  }
+
+  .wireframe-titlebar {
+    background-color: #1e293b;
+    color: #f8fafc;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .wireframe-body {
+    padding: 8px;
+    background-color: #f8fafc;
+  }
+
+  .ui-mode-container {
+    display: flex;
+    gap: 8px;
+    height: 140px;
+  }
+
+  .ui-sidebar {
+    width: 120px;
+    background: #0f172a;
+    color: #94a3b8;
+    border-radius: 4px;
+    padding: 6px;
+    font-size: 9.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ui-main-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .ui-editor-box {
+    flex: 1;
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: monospace;
+    font-size: 9.5px;
+    border-left: 3px solid #38bdf8;
+  }
+
+  .ui-terminal-box {
+    height: 42px;
+    background: #020617;
+    color: #4ade80;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-family: monospace;
+    font-size: 9px;
+  }
+
+  .ui-agent-bar {
+    width: 145px;
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 4px;
+    padding: 6px;
+    font-size: 9.5px;
+    border-left: 1px solid #334155;
+  }
+
+  .vibe-chat-box {
+    flex: 1;
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 9.5px;
+  }
+
+  .vibe-bubble-user {
+    align-self: flex-end;
+    background: #2563eb;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    max-width: 80%;
+  }
+
+  .vibe-bubble-ai {
+    align-self: flex-start;
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 5px 8px;
+    border-radius: 6px;
+    max-width: 85%;
+  }
+
+  .vibe-think-tag {
+    background: #312e81;
+    color: #c7d2fe;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 8.5px;
+    margin-bottom: 3px;
+    display: inline-block;
+  }
+
+  .multi-ai-v-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .multi-ai-card-mock {
+    width: 95%;
+    background: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 5px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9.5px;
+  }
+
+  .multi-ai-arrow {
+    color: #38bdf8;
+    font-weight: bold;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .note-box {
+    background-color: #f0fdf4;
+    border-left: 3px solid #16a34a;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin: 8px 0 12px 0;
+    font-size: 11.5px;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .footer-text {
+    text-align: center;
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 6px;
+  }
+
+  .sign-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 14px;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  .sign-title {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 35px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ==================== TRANG 1 ==================== -->
+  <div class="header-box">
+    <div class="header-left">
+      <h3>Báo Cáo Kế Hoạch & Tiến Độ Đồ Án Chuyên Ngành</h3>
+      <h4>Ngành: Công Nghệ Thông Tin / Kỹ Thuật Phần Mềm</h4>
+    </div>
+    <div class="header-right">
+      <span class="badge-primary">Học kỳ I / 2026-2027</span>
+    </div>
+  </div>
+
+  <div class="title-section">
+    <h1>KẾ HOẠCH & BÁO CÁO THIẾT KẾ GIAO DIỆN HỆ THỐNG</h1>
+    <h2>Đề tài: Môi Trường Phát Triển Phần Mềm Thông Minh Taitestgame IDE (TTG IDE)<br>Tích Hợp AI Agent & Điều Phối Đa Mô Hình (Multi-AI Orchestrator)</h2>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <div class="meta-label">Sinh viên thực hiện:</div>
+      <div class="meta-value">Nhóm sinh viên / Tác giả đồ án</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Giảng viên hướng dẫn:</div>
+      <div class="meta-value">TS. / ThS. Giảng viên phụ trách</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Tên sản phẩm:</div>
+      <div class="meta-value">Taitestgame IDE (TTG IDE Desktop v1.0)</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Nền tảng phát triển:</div>
+      <div class="meta-value">Desktop App (Go 1.21 + Wails v2 + React 18)</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Cơ sở dữ liệu:</div>
+      <div class="meta-value">SQLite nhúng cục bộ (.ttgide/ttgide.db)</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Cổng AI Miễn phí:</div>
+      <div class="meta-value">OpenCode Free API Bridge (Port 5050 - 10 Models)</div>
+    </div>
+  </div>
+
+  <h2 class="section-heading">1. Giới Thiệu Tổng Quan & Mục Tiêu Đề Tài</h2>
+  <p>
+    Trong bối cảnh trí tuệ nhân tạo (AI) đang định hình lại toàn diện ngành công nghiệp phần mềm, các môi trường lập trình truyền thống đang dần chuyển dịch mạnh mẽ sang các <b>AI-First IDE</b> (tiêu biểu như Cursor, Windsurf, Google Antigravity). Tuy nhiên, hầu hết các nền tảng thương mại hiện nay đều thu phí dịch vụ cao, chỉ hỗ trợ tương tác với một mô hình đơn lẻ (Single-Model) và phụ thuộc hoàn toàn vào dịch vụ đám mây đóng kín, gây rủi ro về quyền riêng tư mã nguồn và chi phí vận hành.
+  </p>
+  <p>
+    <b>Đề tài "Taitestgame IDE" (TTG IDE)</b> được nghiên cứu và xây dựng nhằm giải quyết bài toán trên bằng cách phát triển một môi trường lập trình độc lập, gọn nhẹ trên nền tảng Desktop. Sản phẩm kết hợp trực tiếp giữa bộ soạn thảo mã nguồn chuyên nghiệp chuẩn mực và hệ thống điều phối đa trí tuệ nhân tạo (Multi-AI Orchestration) tiên tiến.
+  </p>
+  
+  <p><b>Các mục tiêu nghiên cứu và phát triển cụ thể của đề tài:</b></p>
+  <ul>
+    <li><b>Kiến trúc không gian làm việc kép (Dual-Workspace Architecture):</b> Cho phép lập trình viên chuyển đổi tức thời giữa giao diện viết mã chuẩn mực (IDE Workspace) và giao diện đàm thoại AI chuyên sâu (AI Workspace) mà không làm gián đoạn trạng thái ứng dụng.</li>
+    <li><b>Trung tâm điều phối đa AI (Multi-AI Orchestrator):</b> Thiết kế giao diện luồng công việc hàng dọc (Vertical Pipeline) cho phép nhiều mô hình AI phối hợp giải quyết các bài toán lập trình phức tạp thông qua các chiến lược: Tuần tự, Song song, Đồ thị phụ thuộc (DAG), và Tự động đánh giá - Sửa lỗi.</li>
+    <li><b>Tích hợp cổng AI nội bộ miễn phí:</b> Kết nối trực tiếp với 10 mô hình AI mã nguồn mở thông qua cổng nội bộ OpenCode Free API Bridge (Local Port 5050), loại bỏ chi phí API đắt đỏ cho người học và nhà phát triển.</li>
+    <li><b>Lưu trữ phiên bền vững:</b> Sử dụng SQLite để tự động lưu vết toàn bộ lịch sử trò chuyện, điểm khôi phục (checkpoint) và kết quả điều phối đa AI.</li>
+  </ul>
+
+  <div class="footer-text">
+    Trang 1 / 6 &bull; Báo Cáo Kế Hoạch & Tiến Độ Đồ Án TTG IDE
+  </div>
+
+  <!-- ==================== TRANG 2 ==================== -->
+  <div class="page-break"></div>
+
+  <h2 class="section-heading">2. Kế Hoạch Triển Khai & Báo Cáo Tiến Độ (Milestones)</h2>
+  <p>
+    Dự án được xây dựng theo phương pháp Agile/Scrum với 5 giai đoạn triển khai kế thừa chặt chẽ. Dưới đây là bảng tổng hợp tiến độ thực tế đối chiếu với kế hoạch đề ra:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 8%;">Giai đoạn</th>
+        <th style="width: 25%;">Hạng mục công việc</th>
+        <th style="width: 42%;">Nội dung chi tiết & Sản phẩm bàn giao</th>
+        <th style="width: 12%;">Thời gian</th>
+        <th style="width: 13%;">Trạng thái</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>GĐ 1</b></td>
+        <td>Khảo sát & Thiết kế Kiến trúc</td>
+        <td>Đặc tả yêu cầu phần mềm; lựa chọn công nghệ (Wails v2, Go, React, Monaco); thiết kế sơ đồ CSDL SQLite và giao thức API.</td>
+        <td>Tuần 1 - 2</td>
+        <td><span class="status-tag status-done">✓ Hoàn thành</span></td>
+      </tr>
+      <tr>
+        <td><b>GĐ 2</b></td>
+        <td>Phát triển Backend Go & CSDL</td>
+        <td>Hiện thực hóa Core Engine trong Go; cấu trúc CSDL SQLite; xây dựng Agent ReAct harness; tích hợp client gọi OpenCode Free API (port 5050).</td>
+        <td>Tuần 3 - 4</td>
+        <td><span class="status-tag status-done">✓ Hoàn thành</span></td>
+      </tr>
+      <tr>
+        <td><b>GĐ 3</b></td>
+        <td>Thiết kế & Hiện thực Giao diện (UI/UX)</td>
+        <td>Xây dựng TitleBar, Menu Bar, Monaco Editor đa tab, File Tree, Terminal Panel, Khung chat AI đàm thoại, và giao diện Vertical Multi-AI Orchestrator.</td>
+        <td>Tuần 5 - 7</td>
+        <td><span class="status-tag status-done">✓ Hoàn thành</span></td>
+      </tr>
+      <tr>
+        <td><b>GĐ 4</b></td>
+        <td>Tích hợp Đa AI & Tự Động Hóa</td>
+        <td>Hoàn thiện 5 chiến lược Multi-AI (Sequential, Parallel, DAG, Consensus, Implement-Fix); bóc tách khối suy luận &lt;think&gt;; Tool Call Cards.</td>
+        <td>Tuần 8 - 9</td>
+        <td><span class="status-tag status-done">✓ Hoàn thành</span></td>
+      </tr>
+      <tr>
+        <td><b>GĐ 5</b></td>
+        <td>Kiểm Thử, Đóng Gói & Báo Cáo</td>
+        <td>Chạy 100% Go Unit Tests; biên dịch nhị phân độc lập <code>ttgide.exe</code>; viết tài liệu kỹ thuật, slide thuyết minh và báo cáo nộp nghiệm thu.</td>
+        <td>Tuần 10</td>
+        <td><span class="status-tag status-progress">⏳ Đang tổng kết</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note-box">
+    <b>Đánh giá tiến độ hiện tại:</b> Toàn bộ hệ thống Backend Go, giao diện Frontend React/TypeScript và bộ kết nối 10 Model AI đã được phát triển hoàn thiện 100%, vượt tiến độ so với kế hoạch ban đầu. Ứng dụng đã được biên dịch thành công thành file desktop <code>ttgide.exe</code> sẵn sàng cho buổi nghiệm thu và demo thực tế.
+  </div>
+
+  <h2 class="section-heading">3. Thiết Kế Giao Diện Người Dùng (UI/UX Design Overview)</h2>
+  <p>
+    Giao diện người dùng của <b>Taitestgame IDE</b> được thiết kế theo phong cách hiện đại (Modern Dark Theme), tập trung vào tính công thái học và giảm thiểu phân tâm cho lập trình viên. Hệ thống cung cấp cơ chế <b>Chuyển đổi 3 Không gian làm việc 1-Click</b> (Instant Workspace Switcher) nhưng vẫn bảo toàn tuyệt đối 100% trạng thái hoạt động (mã nguồn đang sửa, tiến trình terminal, lịch sử trò chuyện).
+  </p>
+
+  <h3 class="sub-heading">Thanh Tiêu Đề & Điều Hướng Dùng Chung (TitleBar & Global Navigation)</h3>
+  <ul>
+    <li><b>Native Menu Bar:</b> Tích hợp đầy đủ các danh mục chuẩn máy tính để bàn (Desktop App) gồm: <code>File</code>, <code>Edit</code>, <code>Selection</code>, <code>View</code>, <code>Go</code>, <code>Run</code>, <code>Terminal</code>, <code>Help</code> với dropdown menu tương tác thực tế (Mở thư mục, Lưu file, Chạy test...).</li>
+    <li><b>Workspace Mode Switcher:</b> Nút chuyển 3 trạng thái nổi bật ngay trung tâm thanh tiêu đề: <code>[ IDE ]</code> (Ctrl+1) | <code>[ AI Workspace ]</code> (Ctrl+2) | <code>[ Multi-AI ]</code> (Ctrl+3).</li>
+    <li><b>Chỉ báo Cổng AI (AI Bridge Status Badge):</b> Hiển thị thời gian thực trạng thái kết nối với cổng OpenCode: <code>🟢 Free AI Bridge (:5050)</code> kèm thời gian phản hồi (latency ms), giúp nhận biết ngay khi dịch vụ sẵn sàng.</li>
+    <li><b>Command Palette (Ctrl+Shift+P):</b> Khung tìm kiếm trung tâm hỗ trợ phím tắt, cho phép gõ lệnh nhanh, tìm file, đổi giao diện, chạy kiểm thử mà không cần dùng chuột.</li>
+    <li><b>Settings Modal (Ctrl+,):</b> Hộp thoại cài đặt phân lớp chuyên sâu (Quản lý Model, API Key, Cấu hình Editor, Thư viện công cụ Tool Calls, Phím tắt).</li>
+  </ul>
+
+  <div class="footer-text">
+    Trang 2 / 6 &bull; Báo Cáo Kế Hoạch & Tiến Độ Đồ Án TTG IDE
+  </div>
+
+  <!-- ==================== TRANG 3 ==================== -->
+  <div class="page-break"></div>
+
+  <h2 class="section-heading">3.1. Giao Diện 1: Mode A — IDE Workspace (Phong Cách VS Code Chuẩn)</h2>
+  <p>
+    Không gian làm việc lập trình viên truyền thống, đáp ứng đầy đủ chu trình viết mã, quản lý tập tin và chạy lệnh với hiệu năng cao:
+  </p>
+
+  <!-- MOCKUP WIREFRAME MODE A -->
+  <div class="wireframe-card">
+    <div class="wireframe-titlebar">
+      <span>SƠ ĐỒ BỐ CỤC GIAO DIỆN 1: MODE A — IDE WORKSPACE (VS CODE STYLE)</span>
+      <span style="font-size: 10px; color: #38bdf8;">Phím tắt chuyển đổi: Ctrl + 1</span>
+    </div>
+    <div class="wireframe-body">
+      <div class="ui-mode-container">
+        <!-- Explorer Sidebar -->
+        <div class="ui-sidebar">
+          <div style="font-weight: bold; color: #f8fafc; border-bottom: 1px solid #334155; padding-bottom: 3px;">EXPLORER</div>
+          <div>📁 internal/</div>
+          <div style="padding-left: 8px;">📄 agent.go</div>
+          <div style="padding-left: 8px;">📄 db.go</div>
+          <div>📁 frontend/</div>
+          <div>📄 main.go</div>
+          <div>📄 app.go</div>
+        </div>
+        <!-- Editor & Terminal -->
+        <div class="ui-main-panel">
+          <div class="ui-editor-box">
+            <div style="color: #94a3b8; font-size: 9px; margin-bottom: 4px;">main.go &bull; [Tabs: app.go | agent.go]</div>
+            <div><span style="color: #f43f5e;">func</span> <span style="color: #38bdf8;">main</span>() {</div>
+            <div>&nbsp;&nbsp;app := NewApp()</div>
+            <div>&nbsp;&nbsp;wails.Run(&amp;options.App{...})</div>
+            <div>}</div>
+          </div>
+          <div class="ui-terminal-box">
+            <span style="color: #94a3b8;">TERMINAL: powershell.exe</span><br>
+            PS C:\code\python\Anchuyennganh&gt; go test -v ./... &rarr; <b>PASS (100%)</b>
+          </div>
+        </div>
+        <!-- AI Agent Sidebar -->
+        <div class="ui-agent-bar">
+          <div style="font-weight: bold; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 3px;">AI ASSISTANT</div>
+          <div style="margin-top: 4px; font-size: 9px; color: #94a3b8;">Trợ lý lập trình viên ReAct:</div>
+          <div style="background: #1e293b; padding: 4px; border-radius: 3px; margin-top: 4px; font-size: 8.5px;">
+            🔨 <b>write_file:</b> app.go<br>
+            <span style="color: #4ade80;">✓ Executed successfully</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-heading">Đặc Tả Các Khối Chức Năng Cốt Lõi Trên Giao Diện Mode A:</h3>
+  <ul>
+    <li><b>Activity Bar (Cột biểu tượng trái):</b> Chuyển nhanh giữa Trình duyệt tệp (Explorer), Tìm kiếm văn bản toàn dự án (Grep Search), Quản lý mã nguồn (Git Source Control), Trình gỡ lỗi (Debug), Tiện ích mở rộng (Extensions) và Cài đặt hệ thống.</li>
+    <li><b>File Explorer Tree:</b> Cây thư mục tương tác đa năng; hỗ trợ tạo tệp mới, tạo thư mục, đổi tên, xóa có hộp thoại xác nhận an toàn, đánh dấu trạng thái sửa đổi Git bằng màu sắc trực quan, tự động làm mới tức thì ngay khi Agent Harness chỉnh sửa file.</li>
+    <li><b>Monaco Code Editor:</b> Nhân soạn thảo chuyên nghiệp chuẩn Microsoft VS Code; hỗ trợ quản lý nhiều tab làm việc song song, hiển thị chấm tròn báo trạng thái chưa lưu (dirty indicator), phím tắt lưu tệp <code>Ctrl+S</code>, tô màu cú pháp đa ngôn ngữ (Go, TypeScript, Python, HTML/CSS...) và xem so sánh khác biệt mã nguồn (Diff Viewer).</li>
+    <li><b>Bottom Panel (Khu vực gầm máy):</b> Gồm các tab Terminal tương tác dòng lệnh thực tế (PowerShell/CMD) nhúng trực tiếp trong workspace, Danh sách cảnh báo/lỗi biên dịch (Problems), Trạng thái Git Changes và Nhật ký sự kiện của AI Agent.</li>
+    <li><b>AI Agent Sidebar:</b> Bảng chat AI gắn trực tiếp bên phải trình soạn thảo; cho phép AI đọc ngữ cảnh file đang mở, phân tích lỗi, đề xuất code và tự động gọi các công cụ chỉnh sửa trực tiếp vào mã nguồn dự án.</li>
+  </ul>
+
+  <div class="footer-text">
+    Trang 3 / 6 &bull; Báo Cáo Kế Hoạch & Tiến Độ Đồ Án TTG IDE
+  </div>
+
+  <!-- ==================== TRANG 4 ==================== -->
+  <div class="page-break"></div>
+
+  <h2 class="section-heading">3.2. Giao Diện 2: Mode B — AI Workspace (Phong Cách Antigravity Conversation)</h2>
+  <p>
+    Không gian hội thoại thông minh lấy cảm hứng từ Google Antigravity, tối ưu hóa cho tác vụ nghiên cứu, suy luận logic, lập kế hoạch dự án và phân tích sâu bài toán phần mềm:
+  </p>
+
+  <!-- MOCKUP WIREFRAME MODE B -->
+  <div class="wireframe-card">
+    <div class="wireframe-titlebar">
+      <span>SƠ ĐỒ BỐ CỤC GIAO DIỆN 2: MODE B — AI WORKSPACE (CONVERSATION STYLE)</span>
+      <span style="font-size: 10px; color: #38bdf8;">Phím tắt chuyển đổi: Ctrl + 2</span>
+    </div>
+    <div class="wireframe-body">
+      <div class="ui-mode-container">
+        <!-- Conversation History Sidebar -->
+        <div class="ui-sidebar">
+          <div style="background: #2563eb; color: #fff; text-align: center; padding: 4px; border-radius: 3px; font-weight: bold; margin-bottom: 5px;">+ Cuộc Hội Thoại Mới</div>
+          <div style="font-weight: bold; font-size: 9px; color: #f8fafc;">LỊCH SỬ HỘI THOẠI</div>
+          <div style="background: #1e293b; padding: 3px 5px; border-radius: 3px;">• Thiết kế CSDL SQLite</div>
+          <div>• Tối ưu Monaco Editor</div>
+          <div>• Cấu hình Port 5050</div>
+        </div>
+        <!-- Central Chat Stream -->
+        <div class="vibe-chat-box">
+          <div class="vibe-bubble-user">
+            Lập kế hoạch xây dựng kiến trúc Multi-AI Orchestrator theo hàng dọc?
+          </div>
+          <div class="vibe-bubble-ai">
+            <div class="vibe-think-tag">🧠 Khối suy luận &lt;think&gt; (Bóc tách tư duy logic 1.2s)</div>
+            <div>Tôi đề xuất kiến trúc <b>Vertical Pipeline</b> gồm 3 giai đoạn: Phân tích &rarr; Thực thi &rarr; Đánh giá. Dưới đây là cấu hình chi tiết:</div>
+            <div style="background: #020617; padding: 3px 6px; border-radius: 3px; margin-top: 4px; font-family: monospace; color: #38bdf8;">
+              &bull; Card 1: Planner (Nemotron) &bull; Card 2: Coder (DeepSeek)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-heading">Đặc Tả Các Khối Chức Năng Cốt Lõi Trên Giao Diện Mode B:</h3>
+  <ul>
+    <li><b>Cột quản lý phiên bên trái (Conversation Sidebar):</b> Nút bấm tạo nhanh cuộc hội thoại mới (+ New Conversation), danh sách lịch sử các phiên thảo luận được lưu trữ bền vững trong CSDL SQLite, thanh điều hướng truy cập nhanh các mục Automations, Customizations, Projects và Cài đặt.</li>
+    <li><b>Khung hội thoại trung tâm (Conversation Stream):</b> Trình bày thông điệp dạng luồng hiện đại, phân biệt rõ avatar người dùng và AI, hỗ trợ render Markdown chuẩn xác, highlight code khối đa ngôn ngữ, nút sao chép nhanh và nút Rollback 1-click để hoàn tác mã nguồn nếu AI sinh lỗi.</li>
+    <li><b>Khối bóc tách suy luận (Thinking / Reasoning Block):</b> Tự động phát hiện và tách riêng thẻ suy luận nội tâm <code>&lt;think&gt;...&lt;/think&gt;</code> vào một khung collapsible màu tím nhạt có đồng hồ đếm thời gian, giúp giao diện không bị rác chữ và người dùng dễ dàng theo dõi mạch logic của AI trước khi xem kết quả.</li>
+    <li><b>Thẻ hiển thị Tool Calls trực quan (Tool Call Cards):</b> Hiển thị chi tiết tên lệnh hệ thống, tham số truyền vào và kết quả thực thi thực tế dưới dạng các thẻ trạng thái (Đang chạy, Thành công màu xanh, Lỗi màu đỏ).</li>
+    <li><b>Hộp nhập Prompt đa năng (Universal Prompt Box):</b> Đặt nổi bật tại trung tâm; tích hợp bộ chọn Model từ 10 mô hình miễn phí, bộ chọn chế độ (Hỏi đáp Ask / Lập kế hoạch Plan / Tác tử Agent) và công tắc cấp quyền thực thi an toàn.</li>
+  </ul>
+
+  <div class="footer-text">
+    Trang 4 / 6 &bull; Báo Cáo Kế Hoạch & Tiến Độ Đồ Án TTG IDE
+  </div>
+
+  <!-- ==================== TRANG 5 ==================== -->
+  <div class="page-break"></div>
+
+  <h2 class="section-heading">3.3. Giao Diện 3: Multi-AI Workspace (Multi-Agent Orchestrator — Điểm Nhấn Sáng Tạo)</h2>
+  <p>
+    Đây là tính năng độc đáo và là <b>trọng tâm công nghệ</b> của đề tài TTG IDE. Thay vì chỉ trò chuyện với một mô hình đơn lẻ, giao diện cho phép kết nối một chuỗi nhiều AI Agent cùng làm việc theo dạng <b>hàng dọc (Vertical Pipeline)</b> với vai trò chuyên biệt hóa.
+  </p>
+
+  <!-- MOCKUP WIREFRAME MULTI-AI -->
+  <div class="wireframe-card">
+    <div class="wireframe-titlebar">
+      <span>SƠ ĐỒ BỐ CỤC GIAO DIỆN 3: MULTI-AI ORCHESTRATOR (VERTICAL PIPELINE)</span>
+      <span style="font-size: 10px; color: #38bdf8;">Phím tắt chuyển đổi: Ctrl + 3 / Ctrl + M</span>
+    </div>
+    <div class="wireframe-body">
+      <div style="background: #0f172a; padding: 8px; border-radius: 4px;">
+        <!-- Top Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 5px; margin-bottom: 6px;">
+          <div style="font-size: 10px; color: #f8fafc; font-weight: bold;">
+            Chiến Lược: <span style="color: #38bdf8;">Implement &rarr; Review &rarr; Fix</span> | Số tác tử: 3
+          </div>
+          <div>
+            <span style="background: #16a34a; color: #fff; padding: 2px 7px; border-radius: 3px; font-size: 9.5px; font-weight: bold;">▶ Chạy Toàn Bộ Chuỗi</span>
+          </div>
+        </div>
+        <!-- Vertical Pipeline Cards -->
+        <div class="multi-ai-v-list">
+          <!-- Card 1 -->
+          <div class="multi-ai-card-mock">
+            <div>
+              <b style="color: #38bdf8;">[1] Node: PLANNER</b> &bull; Model: <code>nemotron-3.5-lightning</code><br>
+              <span style="color: #94a3b8; font-size: 8.5px;">Nhiệm vụ: Phân tích yêu cầu và vạch ra cấu trúc hàm</span>
+            </div>
+            <span class="status-tag status-done">✓ Xong (0.8s)</span>
+          </div>
+          <div class="multi-ai-arrow">&darr; Truyền ngữ cảnh kiến trúc</div>
+          <!-- Card 2 -->
+          <div class="multi-ai-card-mock">
+            <div>
+              <b style="color: #4ade80;">[2] Node: IMPLEMENTER</b> &bull; Model: <code>deepseek-v4.1-flash</code><br>
+              <span style="color: #94a3b8; font-size: 8.5px;">Nhiệm vụ: Hiện thực mã nguồn Go và xử lý lỗi biên dịch</span>
+            </div>
+            <span class="status-tag status-done">✓ Xong (2.1s)</span>
+          </div>
+          <div class="multi-ai-arrow">&darr; Chuyển mã nguồn kiểm thử</div>
+          <!-- Card 3 -->
+          <div class="multi-ai-card-mock">
+            <div>
+              <b style="color: #f59e0b;">[3] Node: CODE REVIEWER</b> &bull; Model: <code>glm-5.3-flash</code><br>
+              <span style="color: #94a3b8; font-size: 8.5px;">Nhiệm vụ: Đánh giá bảo mật, tối ưu độ phức tạp thuật toán</span>
+            </div>
+            <span class="status-tag status-done">✓ Xong (1.4s)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-heading">5 Chiến Lược Điều Phối Hỗ Trợ Trực Tiếp Trên Giao Diện:</h3>
+  <ul>
+    <li><b>1. Sequential (Tuần tự):</b> Chạy thẳng từ Node trên xuống Node dưới; kết quả đầu ra của Node trước được tự động gán làm ngữ cảnh đầu vào cho Node kế tiếp.</li>
+    <li><b>2. Parallel (Song song):</b> Chạy đồng thời các mô hình khác nhau để giải cùng một đề bài, có cơ chế giới hạn số lượng luồng (Concurrency Limit) nhằm chống nghẽn đường truyền.</li>
+    <li><b>3. Pipeline / DAG (Đồ thị có hướng không chu trình):</b> Tự động tính toán các quan hệ phụ thuộc; một Node chỉ được kích hoạt khi tất cả các Node cha liên quan đã hoàn thành.</li>
+    <li><b>4. Consensus / Review (Đồng thuận đa mô hình):</b> Nhiều AI cùng đưa ra nhận xét; hệ thống đối chiếu để chỉ ra những điểm các mô hình đồng nhất ý kiến và những điểm mâu thuẫn.</li>
+    <li><b>5. Implement &rarr; Review &rarr; Fix (Chu trình khép kín):</b> Tự động lập kế hoạch &rarr; viết code &rarr; kiểm tra lỗi &rarr; sửa code cho đến khi mã nguồn hoàn toàn sạch lỗi.</li>
+  </ul>
+
+  <h3 class="sub-heading">Giao Diện So Sánh Kết Quả & Chuyển Mã Nguồn Vào Editor:</h3>
+  <ul>
+    <li><b>Side-by-Side Comparison Modal:</b> Cho phép đặt kết quả của 2 hoặc nhiều mô hình cạnh nhau để lập trình viên đánh giá độ chính xác và phong cách code.</li>
+    <li><b>Final Synthesis (Bản tổng hợp tối ưu):</b> Mô hình tổng hợp (Synthesizer) tự động kết hợp những ưu điểm sáng giá nhất của từng phương án thành một bản code cuối cùng.</li>
+    <li><b>Nút 1-Click "Apply to Editor":</b> Chỉ với một thao tác bấm, giải pháp hoàn chỉnh được tự động chuyển ngay sang tab Monaco Editor đang mở tại IDE Workspace để lưu và chạy thử.</li>
+  </ul>
+
+  <div class="footer-text">
+    Trang 5 / 6 &bull; Báo Cáo Kế Hoạch & Tiến Độ Đồ Án TTG IDE
+  </div>
+
+  <!-- ==================== TRANG 6 ==================== -->
+  <div class="page-break"></div>
+
+  <h2 class="section-heading">4. Kiến Trúc Kỹ Thuật & Cổng AI Bridge Tích Hợp</h2>
+  <p>
+    TTG IDE được xây dựng dựa trên sự kết hợp giữa hiệu năng vượt trội của Go ở tầng nền và tính linh hoạt, thẩm mỹ của React ở tầng giao diện:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Tầng kiến trúc</th>
+        <th style="width: 35%;">Công nghệ sử dụng</th>
+        <th style="width: 40%;">Vai trò & Trách nhiệm chính</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Desktop Container</b></td>
+        <td>Wails v2 (Go Desktop Bridge)</td>
+        <td>Đóng gói ứng dụng desktop chuẩn native Windows; kích thước siêu nhẹ; chia sẻ IPC tốc độ cao giữa Go và Webview2.</td>
+      </tr>
+      <tr>
+        <td><b>Core Backend Engine</b></td>
+        <td>Go 1.21+ (Goroutine & Channels)</td>
+        <td>Xử lý logic ReAct harness; thực thi command powershell an toàn; điều phối Multi-AI đa luồng; quản trị giao thức tệp tin.</td>
+      </tr>
+      <tr>
+        <td><b>Presentation UI</b></td>
+        <td>React 18, TypeScript, Tailwind CSS</td>
+        <td>Quản trị trạng thái giao diện linh hoạt; hệ thống theme tối công thái học; tương tác trực quan 3 chế độ làm việc.</td>
+      </tr>
+      <tr>
+        <td><b>Code Editor Engine</b></td>
+        <td>Monaco Editor (@monaco-editor/react)</td>
+        <td>Nhân soạn thảo chuẩn Microsoft VS Code; highlight cú pháp, gợi ý code, kiểm tra lỗi, hiển thị diff.</td>
+      </tr>
+      <tr>
+        <td><b>Local Storage DB</b></td>
+        <td>SQLite 3 (Nhúng trong <code>.ttgide/</code>)</td>
+        <td>Lưu trữ toàn bộ phiên làm việc, lịch sử tin nhắn, bản lưu điểm khôi phục (checkpoint) và cấu hình cá nhân hóa.</td>
+      </tr>
+      <tr>
+        <td><b>Local AI Bridge</b></td>
+        <td>OpenCode Free Bridge (Port 5050)</td>
+        <td>Cung cấp 10 mô hình AI miễn phí với chuẩn tương thích OpenAI REST API, không yêu cầu thẻ tín dụng hay nạp tiền.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-heading">Danh Mục 10 Mô Hình AI Tích Hợp Sẵn Qua Cổng Cục Bộ (Port 5050):</h3>
+  <p style="font-size: 11.5px;">
+    Hệ thống tích hợp sẵn cấu hình đến 10 mô hình AI đa dạng, phục vụ chính xác cho từng vai trò trong quy trình:
+    <code>nemotron-3.5-lightning-free</code> (Planner phản hồi siêu tốc),
+    <code>deepseek-v4.1-flash-free</code> (Coding chuyên sâu, viết unit test),
+    <code>glm-5.3-flash-free</code> (Reviewer, tổng hợp logic),
+    <code>big-pickle</code> (Suy luận sâu thẻ &lt;think&gt;),
+    <code>beam-free</code>, <code>longcat-2.5-preview-free</code>, <code>mimo-v2.6-flash-free</code>, <code>nemotron-3.5-super-vl-free</code>, <code>nemotron-3-ultra-free</code>, <code>minimax-m3.1-flash-free</code> (Xử lý ngữ cảnh dài, dịch thuật, văn phong tiếng Việt tự nhiên).
+  </p>
+
+  <h2 class="section-heading">5. Kết Quả Kiểm Thử Thực Tế & Kế Hoạch Nghiệm Thu</h2>
+  
+  <h3 class="sub-heading">5.1. Kết Quả Kiểm Thử Tự Động (Verification Results)</h3>
+  <ul>
+    <li><b>Backend Unit Tests (Go):</b> Toàn bộ các gói kiểm thử đơn vị trong <code>internal/agent/...</code> và <code>internal/db/...</code> đều đạt kết quả <b>100% PASS</b> (Kiểm tra cô lập Thinking Token, Vòng đời Harness, Phối hợp Multi-AI DAG, Kết nối Port 5050, CRUD SQLite).</li>
+    <li><b>Frontend Build (TypeScript & Vite):</b> Quá trình biên dịch giao diện bằng <code>npm run build</code> hoàn tất với <b>0 lỗi cú pháp</b>, tạo ra gói bundle tối ưu (300 KB Javascript).</li>
+    <li><b>Đóng gói Desktop Binary:</b> File nhị phân độc lập <code>ttgide.exe</code> (dung lượng ~26 MB) đã được biên dịch thành công, khởi chạy trực tiếp mượt mà trên hệ điều hành Windows.</li>
+  </ul>
+
+  <h3 class="sub-heading">5.2. Kế Hoạch Giai Đoạn Tiếp Theo & Nghiệm Thu</h3>
+  <ol>
+    <li><b>Hoàn thiện tài liệu thuyết minh chi tiết:</b> Tổng hợp báo cáo kỹ thuật đầy đủ theo mẫu chuẩn của Nhà trường / Khoa CNTT.</li>
+    <li><b>Thiết kế Slide thuyết trình:</b> Trình bày cô đọng vấn đề nghiên cứu, kiến trúc kỹ thuật và video/ảnh chụp minh họa giao diện.</li>
+    <li><b>Kịch bản Demo trực tiếp:</b> Demo viết app bằng AI Agent Sidebar trong Mode A và demo chuỗi <i>Implement &rarr; Review &rarr; Fix</i> trong Multi-AI Workspace với 1-click apply vào Monaco Editor.</li>
+  </ol>
+
+  <!-- KHU VỰC KÝ TÊN DUYỆT BÁO CÁO -->
+  <div class="sign-grid">
+    <div>
+      <div class="sign-title">GIẢNG VIÊN HƯỚNG DẪN<br><span style="font-weight: normal; font-size: 11px;">(Ký và ghi rõ họ tên)</span></div>
+      <div style="color: #94a3b8; font-style: italic;">.........................................................</div>
+    </div>
+    <div>
+      <div class="sign-title">SINH VIÊN THỰC HIỆN<br><span style="font-weight: normal; font-size: 11px;">(Ký và ghi rõ họ tên)</span></div>
+      <div style="color: #94a3b8; font-style: italic;">.........................................................</div>
+    </div>
+  </div>
+
+  <div class="footer-text">
+    Trang 6 / 6 &bull; Báo Cáo Kế Hoạch & Tiến Độ Đồ Án TTG IDE &bull; Lưu hành nội bộ / Đánh giá học phần
+  </div>
+
+</body>
+</html>
+"""
+
+with open("Ke_Hoach_Bao_Cao_Do_An_TTG_IDE.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("HTML file updated. Re-generating PDF via Playwright...")
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(channel="chrome")
+    page = browser.new_page()
+    page.goto(f"file:///{os.path.abspath('Ke_Hoach_Bao_Cao_Do_An_TTG_IDE.html').replace(os.sep, '/')}")
+    page.pdf(
+        path="Ke_Hoach_Bao_Cao_Do_An_TTG_IDE.pdf",
+        format="A4",
+        print_background=True,
+        margin={"top": "10mm", "bottom": "10mm", "left": "12mm", "right": "12mm"}
+    )
+    browser.close()
+
+print("PDF successfully generated: Ke_Hoach_Bao_Cao_Do_An_TTG_IDE.pdf")

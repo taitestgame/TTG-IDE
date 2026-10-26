@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "ttgide",
+  "outputfilename": "ttgide",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "TTG IDE Team",
+    "email": "dev@ttgide.local"
+  },
+  "info": {
+    "companyName": "Taitestgame",
+    "productName": "Taitestgame IDE",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright 2026 Taitestgame",
+    "comments": "AI-Powered Development Environment with Multi-AI Orchestrator"
+  }
+}
